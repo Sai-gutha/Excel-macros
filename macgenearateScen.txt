@@ -1,0 +1,132 @@
+Sub macgenearateScen()
+
+Dim http As Object
+Dim Json As Object
+Dim apikey As String
+Dim prompt As String
+Dim response As String
+Dim JsonResponse As Object
+Dim JsonString As String
+Dim JsonObject As Object
+Dim Model As Variant
+Dim url As String
+Dim result As String
+Dim rowIndex As Integer
+Dim ScenarioArray As Object
+Dim Scenario As Object
+Dim lastrow As Integer
+Dim i As Integer
+Dim simulatedResponse As String
+Dim ws As Worksheet
+Dim wsReq As Worksheet
+Dim wsScen As Worksheet
+
+
+' Define sheets
+Set wsReq = ThisWorkbook.Sheets("Requirement")
+Set wsScen = ThisWorkbook.Sheets("mac_Scenarios")
+
+
+' Set headers in worksheet
+wsScen.Cells(1, 1).Value = ("ScenarioName")
+wsScen.Cells(1, 2).Value = ("Description")
+wsScen.Rows(1).Font.Bold = True
+
+
+' Intialize rowIndex
+rowIndex = 2
+
+
+' read the given requirement to print scenarios in Json format
+Dim cellValue As Variant
+cellValue = wsReq.Range("E2").Value
+
+
+' simulated Json response
+JsonString = "{""mac_Scenarios"": [" & _
+                 "{""ScenarioName"": ""Configure Qualifier with OR Condition"", ""Description"": ""User configures a qualifier with an OR condition (e.g., Color = Black OR Blue) via the Promo Config UI and verifies the condition is saved and displayed correctly.""}," & _
+                 "{""ScenarioName"": ""Configure Qualifier with AND Condition (Default)"", ""Description"": ""User configures a qualifier with the default AND condition (e.g., Color = Black AND Season = Winter) and confirms it applies as expected.""}," & _
+                 "{""ScenarioName"": ""Configure Target with OR Condition"", ""Description"": ""User sets a target with an OR condition (e.g., Product Class = Shirts OR Tops) and ensures it is reflected in the UI and applied correctly.""}," & _
+                 "{""ScenarioName"": ""Configure Target with AND Condition"", ""Description"": ""User sets a target with an AND condition (e.g., Product Class = Shirts AND Style = 15003) and validates the behavior.""}," & _
+                 "{""ScenarioName"": ""Mix AND/OR Conditions Across Qualifier and Target"", ""Description"": ""User configures a qualifier with OR (Color = Black OR Blue) and a target with AND (Product Class = Shirts AND Style = 15003), then verifies both conditions are correctly applied.""}," & _
+                 "{""ScenarioName"": ""Edit Existing Promo with AND/OR Conditions"", ""Description"": ""User edits an existing promo, changes the AND/OR conditions (e.g., OR to AND), and confirms the updated rules are saved and displayed.""}," & _
+                 "{""ScenarioName"": ""Display AND/OR in Inclusion/Exclusion Rules List"", ""Description"": ""User views the Inclusion/Exclusion Rules List screen and verifies that AND/OR conditions between attributes (e.g., Order, Payment) are correctly shown.""}," & _
+                 "{""ScenarioName"": ""Confirm Screen with AND/OR Conditions"", ""Description"": ""User navigates to the Confirm screen and ensures AND/OR conditions across Qualifier and Target are accurately displayed.""}," & _
+                 "{""ScenarioName"": ""Configure OR Condition Across Different Categories"", ""Description"": ""User configures an OR condition between different categories (e.g., Order = Online OR Payment = Credit Card) and verifies the generic support.""}," & _
+                 "{""ScenarioName"": ""Configure AND Condition Across Different Categories"", ""Description"": ""User configures an AND condition between different categories (e.g., Employee = Active AND Customer = Premium) and confirms it works.""}" & _
+                 "]}"
+
+
+'Debug print the Json String to verify
+Debug.Print "JSON String: " & JsonString
+
+
+
+' Parse Json (requires VBA - JSON library)
+On Error Resume Next
+Set JsonObject = JsonConverter.ParseJson(JsonString)
+If Err.Number <> 0 Then
+    MsgBox "Error: parsing JSON: " & Err.Description, vbCritical
+    Exit Sub
+End If
+On Error GoTo 0
+
+
+
+' Validate Json response
+If JsonObject Is Nothing Then
+    MsgBox "Error: JSON Object is Nothing!", vbCritical
+    Exit Sub
+End If
+
+
+If Not JsonObject.Exists("mac_Scenarios") Then
+    MsgBox "Error: 'mac_Scenarios' key is not found in Json response!", vbCritical
+    Exit Sub
+End If
+
+' Assign Scenario array
+Set ScenarioArray = JsonObject("mac_Scenarios")
+
+
+' Debug: Check if ScenarioArray is Nothing or not iterable
+If ScenarioArray Is Nothing Then
+    MsgBox "Error: ScenarioArray is Nothing!", vbCritical
+    Exit Sub
+End If
+
+' Debug: Check the type of ScenarioArray
+Debug.Print "ScenarioArray Type: " & TypeName(ScenarioArray)
+
+
+' Check if ScenarioArray is a collection/array
+On Error Resume Next
+Dim count As Integer
+count = ScenarioArray.count
+If Err.Number <> 0 Then
+    MsgBox "Error: ScenarioArray is not a valid collection! Type: " & TypeName(ScenarioArray), vbCritical
+    Exit Sub
+End If
+On Error GoTo 0
+
+If count = 0 Then
+    MsgBox "Error: ScenarioArray is empty!", vbInformation
+    Exit Sub
+End If
+
+
+
+
+' Iterate through scenarios and populate the spreadsheet
+For Each Scenario In ScenarioArray
+    wsScen.Cells(rowIndex, 1).Value = Scenario("ScenarioName")
+    wsScen.Cells(rowIndex, 2).Value = Scenario("Description")
+    wsScen.Rows(rowIndex).Font.Bold = False
+    rowIndex = rowIndex + 1
+Next Scenario
+
+
+MsgBox " Generated mac_scenarios Sucessfully", vbInformation
+
+
+End Sub
